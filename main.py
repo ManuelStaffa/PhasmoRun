@@ -10,10 +10,22 @@ import sys, os
 
 
 # Initialize -------------------------------------------------------------------
+def get_path(filename):
+    if hasattr(sys, "_MEIPASS"):
+        return f'{os.path.join(sys._MEIPASS, filename)}'
+    else:
+        return f'{filename}'
+
+
 # Read file
 def readFile(search):
     try:
-        with open("test.txt", "r") as file:
+        dir_path = '%s\\PhasmoRun\\' %  os.environ['APPDATA']
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+        file_path = '%ssave.txt' % dir_path
+
+        with open(file_path, "r") as file:
             lines = file.readlines()
             for i, line in enumerate(lines):
                 if line.endswith("\n"):
@@ -23,8 +35,27 @@ def readFile(search):
                 if line.startswith(search):
                     return line[len(search)+1:].strip()
     except:
-        with open("test.txt", "w") as file:
-            file.write("autorunKey=Key.alt_l")
+        editLabel("No save found")
+        writeFile("autorunKey={}".format(keyDictionary["Key.f1"]))
+
+
+# Write file
+def writeFile(string):
+    try:
+        dir_path = '%s\\PhasmoRun\\' %  os.environ['APPDATA']
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+        file_path = '%ssave.txt' % dir_path
+
+        if str(string).startswith("'"):
+            text = str(string)[1:-1]
+        else:
+            text = string
+
+        with open(file_path, "w") as file:
+            file.write(text)
+    except:
+        editLabel("Failed to write file")
 
 
 # Key dictionary
@@ -103,9 +134,9 @@ try:
     else:
         autorunKey = keyDictionary[readFile("autorunKey")]
 except:
-    autorunKey = Key.alt_l
+    autorunKey = keyDictionary["Key.f1"]
 
-version = "2.0.1"
+version = "2.2.0"
 window_width = "300"
 window_height = "300"
 
@@ -122,7 +153,7 @@ window = Tk()
 window.title("PhasmoRun {}".format(version))
 window.geometry("{}x{}".format(window_width, window_height))
 window.configure(bg=grey)
-#window.iconbitmap("phasmo.ico")
+window.iconbitmap(get_path("phasmo.ico"))
 
 
 # Functions --------------------------------------------------------------------
@@ -143,6 +174,7 @@ def toggleAutorun():
                 editLabel("Uh Oh. Something went wrong.")
                 endProgram()
         else:
+            disableAutorun()
             editLabel("Please start/focus Phasmophobia.")
 
     else:
@@ -165,7 +197,7 @@ def disableAutorun():
     #buttonAutorun.deselect()
     buttonAutorun.configure(bg=red,
                     activebackground=red)
-    editLabel("Disabled auto sprint - tabbed out of game.")
+    editLabel("Disabled auto sprint.")
 
     try:
         pydirectinput.keyUp('shiftleft')
@@ -243,12 +275,7 @@ def keyPress(key):
     if rebind:
         autorunKey = key
         editLabel("Key bound to {}".format(autorunKey))
-        with open("test.txt", "w") as file:
-            if str(autorunKey).startswith("'"):
-                writeKey = str(autorunKey)[1:-1]
-            else:
-                writeKey = autorunKey
-            file.write("autorunKey={}".format(writeKey))
+        writeFile("autorunKey={}".format(autorunKey))
         info.configure(text="Press [{}] to start, and [f4] to force quit".format(autorunKey))
         disableKeybind()
 
@@ -268,8 +295,10 @@ buttonAutorun = Button(text="Enable/disable autorun",
                     background=red,
                     activebackground=red,
                     foreground=white,
+                    disabledforeground=white,
                     activeforeground=white,
                     bd=0,
+                    state="disabled",
                     command=toggleAutorun)
 
 buttonKeybind = Button(text="Click to change keybind.\nCurrent key: {}".format(str(autorunKey)),
