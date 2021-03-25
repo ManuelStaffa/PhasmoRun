@@ -1,8 +1,10 @@
 import sys, os
 import pydirectinput
 from tkinter import *
+import pywintypes, win32gui
 from win32gui import GetWindowText, GetForegroundWindow
 from pynput.keyboard import Listener, Key, KeyCode
+from configparser import ConfigParser
 from sys import exit
 from dict import keyDictionary
 
@@ -17,56 +19,116 @@ def get_path(filename):
 
 # Read file
 def readFile(search):
+    dir_path = '%s\\PhasmoRun\\' %  os.environ['APPDATA']
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+    file_path = '%sconfig.ini' % dir_path
+
     try:
-        dir_path = '%s\\PhasmoRun\\' %  os.environ['APPDATA']
-        if not os.path.exists(dir_path):
-            os.makedirs(dir_path)
-        file_path = '%ssave.txt' % dir_path
-
-        with open(file_path, "r") as file:
-            lines = file.readlines()
-            for i, line in enumerate(lines):
-                if line.endswith("\n"):
-                    lines[i] = line[:-1]
-
-            for line in lines:
-                if line.startswith(search):
-                    return line[len(search)+1:].strip()
+        config.read(file_path)
+        return config.get("settings", search)
     except:
         editLabel("No save found")
-        writeFile("autorunKey={}".format(keyDictionary["Key.f1"]))
+        writeFile("autorun_key", keyDictionary["Key.f1"])
 
 
 # Write file
-def writeFile(string):
+def writeFile(name, value):
+    dir_path = '%s\\PhasmoRun\\' %  os.environ['APPDATA']
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+    file_path = '%sconfig.ini' % dir_path
+
     try:
-        dir_path = '%s\\PhasmoRun\\' %  os.environ['APPDATA']
-        if not os.path.exists(dir_path):
-            os.makedirs(dir_path)
-        file_path = '%ssave.txt' % dir_path
-
-        if str(string).startswith("'"):
-            text = str(string)[1:-1]
-        else:
-            text = string
-
-        with open(file_path, "w") as file:
-            file.write(text)
+        config.set("settings", str(name), str(value))
+        with open(file_path, 'w') as configfile:
+            config.write(configfile)
+        editLabel("Saved key config")
     except:
-        editLabel("Failed to write file")
+        config.add_section("settings")
+        config.set("settings", "autorun_key", "Key.f1")
+        with open(file_path, 'w') as configfile:
+            config.write(configfile)
+
+
+"""keyDictionary = {
+    "Key.alt":Key.alt,
+    "Key.alt_l":Key.alt_l,
+    "Key.alt_r":Key.alt_r,
+    "Key.alt_gr":Key.alt_gr,
+    "Key.backspace":Key.backspace,
+    "Key.caps_lock":Key.caps_lock,
+    "Key.cmd":Key.cmd,
+    "Key.cmd_l":Key.cmd_l,
+    "Key.cmd_r":Key.cmd_r,
+    "Key.ctrl":Key.ctrl,
+    "Key.ctrl_l":Key.ctrl_l,
+    "Key.ctrl_r":Key.ctrl_r,
+    "Key.delete":Key.delete,
+    "Key.down":Key.down,
+    "Key.end":Key.end,
+    "Key.enter":Key.enter,
+    "Key.esc":Key.esc,
+    "Key.f1":Key.f1,
+    "Key.f2":Key.f2,
+    "Key.f3":Key.f3,
+    "Key.f4":Key.f4,
+    "Key.f5":Key.f5,
+    "Key.f6":Key.f6,
+    "Key.f7":Key.f7,
+    "Key.f8":Key.f8,
+    "Key.f9":Key.f9,
+    "Key.f10":Key.f10,
+    "Key.f11":Key.f11,
+    "Key.f12":Key.f12,
+    "Key.f13":Key.f13,
+    "Key.f14":Key.f14,
+    "Key.f15":Key.f15,
+    "Key.f16":Key.f16,
+    "Key.f17":Key.f17,
+    "Key.f18":Key.f18,
+    "Key.f19":Key.f19,
+    "Key.f20":Key.f20,
+    "Key.home":Key.home,
+    "Key.left":Key.left,
+    "Key.page_down":Key.page_down,
+    "Key.page_up":Key.page_up,
+    "Key.right":Key.right,
+    "Key.shift":Key.shift,
+    "Key.shift_l":Key.shift_l,
+    "Key.shift_r":Key.shift_r,
+    "Key.space":Key.space,
+    "Key.tab":Key.tab,
+    "Key.up":Key.up,
+    "Key.media_play_pause":Key.media_play_pause,
+    "Key.media_volume_mute":Key.media_volume_mute,
+    "Key.media_volume_down":Key.media_volume_down,
+    "Key.media_volume_up":Key.media_volume_up,
+    "Key.media_previous":Key.media_previous,
+    "Key.media_next":Key.media_next,
+    "Key.insert":Key.insert,
+    "Key.menu":Key.menu,
+    "Key.num_lock":Key.num_lock,
+    "Key.pause":Key.pause,
+    "Key.print_screen":Key.print_screen,
+    "Key.scroll_lock":Key.scroll_lock}"""
 
 
 # Variables --------------------------------------------------------------------
+config = ConfigParser()
+
 global autorun
 global rebind
 global autorunKey
 autorun = False
 rebind = False
+
 try:
-    if len(readFile("autorunKey")) == 1:
-        autorunKey = KeyCode.from_char(readFile("autorunKey"))
+    key = readFile("autorun_key")
+    if len(key) == 1:
+        autorunKey = KeyCode.from_char(key)
     else:
-        autorunKey = keyDictionary[readFile("autorunKey")]
+        autorunKey = keyDictionary[key]
 except:
     autorunKey = keyDictionary["Key.f1"]
 
@@ -154,7 +216,7 @@ def keybind():
         #buttonAutorun.deselect()
         buttonKeybind.configure(bg=blue,
                         activebackground=blue,
-                        text="Click to change keybind.\nCurrent key: {}".format(autorunKey))
+                        text="Click to change keybind.\nCurrent key: {}".format(str(autorunKey).replace("'", "")))
 
 
 # Disables the rebind button
@@ -165,7 +227,7 @@ def disableKeybind():
     rebind = False
     buttonKeybind.configure(bg=blue,
                     activebackground=blue,
-                    text="Click to change keybind.\nCurrent key: {}".format(autorunKey))
+                    text="Click to change keybind.\nCurrent key: {}".format(str(autorunKey).replace("'", "")))
 
 
 # Edit Label
@@ -180,7 +242,6 @@ def editLabel(status):
 
 # End program
 def endProgram():
-    #status = "Disabled auto sprint - Stopping script..."
     pydirectinput.keyUp('shiftleft')
     pydirectinput.keyUp('shiftright')
     window.destroy()
@@ -208,14 +269,14 @@ def keyPress(key):
     # Rebind key
     if rebind:
         autorunKey = key
-        editLabel("Key bound to {}".format(autorunKey))
-        writeFile("autorunKey={}".format(autorunKey))
-        info.configure(text="Press [{}] to start, and [f4] to force quit".format(autorunKey))
+        writeFile("autorun_key", str(autorunKey).replace("'", ""))
+        editLabel("Key bound to {}".format(str(autorunKey).replace("'", "")))
+        info.configure(text="Press [{}] to start, and [f4] to force quit".format(str(autorunKey).replace("'", "")))
         disableKeybind()
 
 
 # Window contents --------------------------------------------------------------
-info = Label(text="Press [{}] to start, and [f4] to force quit".format(autorunKey),
+info = Label(text="Press [{}] to start, and [f4] to force quit".format(str(autorunKey).replace("'", "")),
                 width=window_width,
                 height="3",
                 background=grey,
@@ -235,7 +296,7 @@ buttonAutorun = Button(text="Enable/disable autorun",
                     state="disabled",
                     command=toggleAutorun)
 
-buttonKeybind = Button(text="Click to change keybind.\nCurrent key: {}".format(str(autorunKey)),
+buttonKeybind = Button(text="Click to change keybind.\nCurrent key: {}".format(str(autorunKey).replace("'", "")),
                     width=window_width,
                     height="3",
                     #selectcolor=grey,
@@ -265,4 +326,6 @@ text_box.pack()
 # Run program ------------------------------------------------------------------
 listener = Listener(on_press=keyPress)
 listener.start()
+window.protocol("WM_DELETE_WINDOW", endProgram)
 window.mainloop()
+a=input("a")
